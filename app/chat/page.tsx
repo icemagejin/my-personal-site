@@ -45,6 +45,7 @@ export default function ChatPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [currentMermaid, setCurrentMermaid] = useState<string | null>(null);
   const [userMessageCount, setUserMessageCount] = useState(0);
+  const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -82,7 +83,7 @@ export default function ChatPage() {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!input.trim() || !currentConversationId) return;
+    if (!input.trim() || !currentConversationId || isThinking) return;
 
     const newUserMessageCount = userMessageCount + 1;
     setUserMessageCount(newUserMessageCount);
@@ -105,6 +106,8 @@ export default function ChatPage() {
 
     const updatedConvsAfterUser = chatHistoryManager.getConversations();
     setConversations(updatedConvsAfterUser);
+
+    setIsThinking(true);
 
     try {
       const response = await fetch('/api/chat', {
@@ -153,6 +156,8 @@ export default function ChatPage() {
       chatHistoryManager.addMessage(currentConversationId, errorMessage);
       const updatedConvs = chatHistoryManager.getConversations();
       setConversations(updatedConvs);
+    } finally {
+      setIsThinking(false);
     }
   };
 
@@ -216,7 +221,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
+    <div className="flex flex-col bg-gray-50 h-[calc(100vh-64px)]">
       <div className="flex-1 flex overflow-hidden max-w-[1800px] mx-auto w-full px-4 py-6 gap-4">
         <div className="w-[40%] flex flex-col border border-gray-200 bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
@@ -291,6 +296,13 @@ export default function ChatPage() {
                 </div>
               ))
             )}
+            {isThinking && (
+              <div className="flex justify-start">
+                <div className="max-w-[85%] rounded-lg px-4 py-3 bg-gray-100 text-gray-900">
+                  <p className="leading-relaxed text-sm text-gray-500">思考中...</p>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -302,13 +314,19 @@ export default function ChatPage() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="输入产品名称或问题..."
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm"
+                disabled={isThinking}
+                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-black text-sm disabled:bg-gray-50 disabled:cursor-not-allowed"
               />
               <button
                 onClick={handleSend}
-                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center"
+                disabled={isThinking || !input.trim()}
+                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center justify-center disabled:bg-gray-400 disabled:cursor-not-allowed min-w-[60px]"
               >
-                <Send className="w-4 h-4" />
+                {isThinking ? (
+                  <span className="text-xs">思考中...</span>
+                ) : (
+                  <Send className="w-4 h-4" />
+                )}
               </button>
             </div>
           </div>
