@@ -7,7 +7,7 @@ import { Chrome as Home, Newspaper, Lightbulb, MapPin } from 'lucide-react';
 const navItems = [
   { href: '/', label: '首页', icon: Home, disabled: false },
   { href: '/news', label: '行业动态', icon: Newspaper, disabled: false },
-  { href: '/chat', label: '产品拆解', icon: Lightbulb, disabled: true },
+  { href: '/chat', label: '产品拆解', icon: Lightbulb, disabled: false },
   { href: '/map', label: '美食地图', icon: MapPin, disabled: true },
 ];
 
