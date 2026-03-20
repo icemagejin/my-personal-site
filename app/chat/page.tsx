@@ -81,7 +81,7 @@ export default function ChatPage() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim() || !currentConversationId) return;
 
     const newUserMessageCount = userMessageCount + 1;
@@ -100,22 +100,27 @@ export default function ChatPage() {
     };
 
     chatHistoryManager.addMessage(currentConversationId, userMessage);
+    const userInput = input;
     setInput('');
 
-    setTimeout(() => {
-      const assistantContent = `很好的问题！关于"${input}"的拆解分析，我已经为你生成了思维导图。
+    const updatedConvsAfterUser = chatHistoryManager.getConversations();
+    setConversations(updatedConvsAfterUser);
 
-你可以在右侧看到详细的分析框架：
-- 用户需求：目标用户、核心痛点、使用场景
-- 核心功能：基础功能、特色功能、增值服务
-- 商业价值：收益模式、成本结构、增长引擎
-- 竞争优势：技术壁垒、用户体验、网络效应
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: userInput }),
+      });
 
-\`\`\`mermaid
-${SAMPLE_MERMAID}
-\`\`\`
+      if (!response.ok) {
+        throw new Error('Failed to get response');
+      }
 
-继续提问来深化分析，比如："该产品的关键成功要素是什么？"`;
+      const data = await response.json();
+      const assistantContent = data.answer || '抱歉，我无法生成回答。';
 
       const mermaidCode = chatHistoryManager.extractMermaidCode(assistantContent);
 
@@ -135,10 +140,20 @@ ${SAMPLE_MERMAID}
 
       const updatedConvs = chatHistoryManager.getConversations();
       setConversations(updatedConvs);
-    }, 800);
+    } catch (error) {
+      console.error('Error sending message:', error);
 
-    const updatedConvs = chatHistoryManager.getConversations();
-    setConversations(updatedConvs);
+      const errorMessage: ChatMessage = {
+        id: `msg_${Date.now()}_assistant`,
+        role: 'assistant',
+        content: '抱歉，发送消息时出现错误。请稍后再试。',
+        timestamp: Date.now(),
+      };
+
+      chatHistoryManager.addMessage(currentConversationId, errorMessage);
+      const updatedConvs = chatHistoryManager.getConversations();
+      setConversations(updatedConvs);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -202,8 +217,8 @@ ${SAMPLE_MERMAID}
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      <div className="flex-1 flex overflow-hidden">
-        <div className="w-[40%] flex flex-col border-r border-gray-200 bg-white">
+      <div className="flex-1 flex overflow-hidden max-w-[1800px] mx-auto w-full px-4 py-6 gap-4">
+        <div className="w-[40%] flex flex-col border border-gray-200 bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
             <h2 className="font-semibold text-sm">产品拆解</h2>
             <div className="flex items-center space-x-1">
@@ -303,7 +318,7 @@ ${SAMPLE_MERMAID}
           {currentMermaid ? (
             <MermaidDiagram code={currentMermaid} onDownloadClick={handleDownloadClick} />
           ) : (
-            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
+            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm border border-gray-200 rounded-lg bg-white">
               对话中将自动生成思维导图
             </div>
           )}
